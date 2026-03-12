@@ -15,6 +15,8 @@ import Admin from './pages/Admin';
 import AuthTest from './pages/AuthTest';
 import ClassDetail from './pages/ClassDetail';
 import CourseDetail from './pages/CourseDetail';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsAndConditions from './pages/TermsAndConditions';
 import { AuthProvider } from './contexts/AuthContext';
 import WhatsAppButton from './components/WhatsAppButton';
 
@@ -39,6 +41,8 @@ function App() {
                 <Route path="/auth-test" element={<AuthTest />} />
                 <Route path="/class/:id" element={<ClassDetail />} />
                 <Route path="/course/:id" element={<CourseDetail />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsAndConditions />} />
               </Routes>
             </main>
             <Footer />
