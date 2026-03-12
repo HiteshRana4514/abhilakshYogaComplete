@@ -3,15 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase, TABLES } from '../utils/supabase';
 import { formatSimpleText } from '../utils/textFormatter.jsx';
-import { 
-  MagnifyingGlassIcon, 
-  FunnelIcon, 
-  CalendarIcon, 
-  ClockIcon, 
-  UserIcon, 
+import {
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  CalendarIcon,
+  ClockIcon,
+  UserIcon,
   StarIcon,
   MapPinIcon
 } from '@heroicons/react/24/outline';
+import SEO from '../components/SEO';
 
 const Classes = () => {
   const navigate = useNavigate();
@@ -19,18 +20,18 @@ const Classes = () => {
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedInstructor, setSelectedInstructor] = useState('all');
   const [selectedDuration, setSelectedDuration] = useState('all');
   const [priceRange, setPriceRange] = useState([0, 1000]);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [classesPerPage] = useState(9);
-  
+
   // Sorting states
   const [sortBy, setSortBy] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
@@ -92,7 +93,7 @@ const Classes = () => {
     }
 
     // Price filter
-    filtered = filtered.filter(cls => 
+    filtered = filtered.filter(cls =>
       cls.price >= priceRange[0] && cls.price <= priceRange[1]
     );
 
@@ -167,7 +168,7 @@ const Classes = () => {
   const ErrorMessage = () => (
     <div className="text-center py-12">
       <div className="text-red-500 text-lg mb-4">⚠️ {error}</div>
-      <button 
+      <button
         onClick={fetchClasses}
         className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
       >
@@ -180,7 +181,7 @@ const Classes = () => {
   const NoResults = () => (
     <div className="text-center py-12">
       <div className="text-gray-500 text-lg mb-4">No classes found matching your criteria</div>
-      <button 
+      <button
         onClick={resetFilters}
         className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
       >
@@ -191,6 +192,11 @@ const Classes = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-20">
+      <SEO
+        title="Yoga Classes"
+        description="Explore our wide range of yoga classes in Amritsar, including Hatha, Power Yoga, Ashtanga, and sessions for all skill levels."
+        keywords="Yoga Classes Amritsar, Hatha Yoga, Power Yoga, Beginner Yoga, Yoga for Wellness"
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -287,7 +293,7 @@ const Classes = () => {
             </select>
 
             <div className="flex items-center gap-2">
-                                      <span className="text-sm text-gray-600">Price (₹):</span>
+              <span className="text-sm text-gray-600">Price (₹):</span>
               <input
                 type="number"
                 placeholder="Min"
@@ -356,11 +362,10 @@ const Classes = () => {
                         </div>
                       )}
                       <div className="absolute top-4 right-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          cls.level === 'Beginner' ? 'bg-green-100 text-green-800' :
-                          cls.level === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cls.level === 'Beginner' ? 'bg-green-100 text-green-800' :
+                            cls.level === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                          }`}>
                           {cls.level}
                         </span>
                       </div>
@@ -400,8 +405,8 @@ const Classes = () => {
                         <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                           Book Now
                         </button>
-            </div>
-          </div>
+                      </div>
+                    </div>
                   </motion.div>
                 ))}
               </div>
@@ -416,21 +421,20 @@ const Classes = () => {
                   >
                     Previous
                   </button>
-                  
+
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <button
                       key={page}
                       onClick={() => paginate(page)}
-                      className={`px-4 py-2 rounded-lg ${
-                        currentPage === page
+                      className={`px-4 py-2 rounded-lg ${currentPage === page
                           ? 'bg-blue-600 text-white'
                           : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       {page}
                     </button>
                   ))}
-                  
+
                   <button
                     onClick={() => paginate(currentPage + 1)}
                     disabled={currentPage === totalPages}

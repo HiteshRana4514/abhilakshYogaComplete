@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
 import { PhoneIcon, EnvelopeIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { Facebook, Instagram, Youtube, MessageSquare } from 'lucide-react';
+import { useContent } from '../hooks/useContent';
 import logo from '/footer_logo.png'
 
 const Footer = () => {
+  const { content: globalContent } = useContent('global');
   const currentYear = new Date().getFullYear();
 
   const quickLinks = [
@@ -15,12 +18,22 @@ const Footer = () => {
     { name: 'FAQ', href: '/faq' },
   ];
 
-  const socialLinks = [
-    { name: 'Facebook', href: '#', icon: '📘' },
-    { name: 'Instagram', href: '#', icon: '📷' },
-    { name: 'YouTube', href: '#', icon: '📺' },
-    { name: 'WhatsApp', href: '#', icon: '💬' },
+  const socialLinks = globalContent.social?.links || [
+    { name: 'Facebook', href: '#', icon: 'Facebook' },
+    { name: 'Instagram', href: '#', icon: 'Instagram' },
+    { name: 'YouTube', href: '#', icon: 'Youtube' },
+    { name: 'WhatsApp', href: '#', icon: 'MessageSquare' },
   ];
+
+  const SocialIcon = ({ name, className }) => {
+    switch (name.toLowerCase()) {
+      case 'facebook': return <Facebook className={className} />;
+      case 'instagram': return <Instagram className={className} />;
+      case 'youtube': return <Youtube className={className} />;
+      case 'whatsapp': return <MessageSquare className={className} />;
+      default: return <MessageSquare className={className} />;
+    }
+  };
 
   return (
     <footer className="bg-gray-900 text-white">
@@ -29,19 +42,19 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="lg:col-span-1">
             <Link to="/" className="flex items-center space-x-2 mb-4">
-              
-              <img 
-              src={logo} 
-              alt="Abhilaksh Yoga Logo" 
-              className="w-20 h-20 object-contain"
-            />
+
+              <img
+                src={logo}
+                alt="Abhilaksh Yoga Logo"
+                className="w-20 h-20 object-contain"
+              />
               <div>
                 <h3 className="text-xl font-bold gradient-text">Abhilaksh Yoga</h3>
                 <p className="text-sm text-gray-400">Path to Vitality</p>
               </div>
             </Link>
             <p className="text-gray-300 text-sm leading-relaxed">
-              Discover the transformative power of yoga with our expert instructors. 
+              Discover the transformative power of yoga with our expert instructors.
               Join us on your journey to physical, mental, and spiritual well-being.
             </p>
           </div>
@@ -69,17 +82,20 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <PhoneIcon className="h-5 w-5 text-primary-orange" />
-                <span className="text-gray-300 text-sm">+91 98765 43210</span>
+                <span className="text-gray-300 text-sm">
+                  {globalContent.contact?.phone?.[0] || '+91 98765 43210'}
+                </span>
               </div>
               <div className="flex items-center space-x-3">
                 <EnvelopeIcon className="h-5 w-5 text-primary-orange" />
-                <span className="text-gray-300 text-sm">info@abhilakshyoga.com</span>
+                <span className="text-gray-300 text-sm">
+                  {globalContent.contact?.email?.[0] || 'info@abhilakshyoga.com'}
+                </span>
               </div>
               <div className="flex items-start space-x-3">
                 <MapPinIcon className="h-5 w-5 text-primary-orange mt-0.5" />
                 <span className="text-gray-300 text-sm">
-                  123 Yoga Street, Wellness City<br />
-                  State - 123456, India
+                  {globalContent.contact?.address?.join(', ') || '123 Yoga Street, Wellness City, State - 123456, India'}
                 </span>
               </div>
             </div>
@@ -93,10 +109,12 @@ const Footer = () => {
                 <a
                   key={social.name}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary-green transition-colors duration-200"
                   title={social.name}
                 >
-                  <span className="text-lg">{social.icon}</span>
+                  <SocialIcon name={social.name} className="h-5 w-5 text-gray-300" />
                 </a>
               ))}
             </div>

@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase, TABLES } from '../utils/supabase';
 import { formatSimpleText } from '../utils/textFormatter.jsx';
-import { 
-  MagnifyingGlassIcon, 
-  XMarkIcon, 
+import {
+  MagnifyingGlassIcon,
+  XMarkIcon,
   ChevronUpIcon,
   ChevronDownIcon,
   AcademicCapIcon,
@@ -15,6 +15,7 @@ import {
   StarIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import SEO from '../components/SEO';
 
 const Courses = () => {
   const navigate = useNavigate();
@@ -22,18 +23,18 @@ const Courses = () => {
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState('all');
   const [instructorFilter, setInstructorFilter] = useState('all');
   const [durationFilter, setDurationFilter] = useState('all');
   const [priceRangeFilter, setPriceRangeFilter] = useState('all');
-  
+
   // Sorting states
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [coursesPerPage] = useState(9);
@@ -48,7 +49,7 @@ const Courses = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       setCourses(data || []);
       setFilteredCourses(data || []);
     } catch (err) {
@@ -228,6 +229,11 @@ const Courses = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-20">
+      <SEO
+        title="Teacher Training Courses"
+        description="Enroll in professional Yoga Teacher Training (YTT) courses in Amritsar. Get certified and start your career as a professional yoga instructor."
+        keywords="Yoga Teacher Training Amritsar, YTT Certification, Yoga Instructor Course, Professional Yoga Training"
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -309,11 +315,11 @@ const Courses = () => {
               onChange={(e) => setPriceRangeFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
-                              <option value="all">All Prices (₹)</option>
-                              <option value="0-100">₹0 - ₹100</option>
-                <option value="100-500">₹100 - ₹500</option>
-                <option value="500-1000">₹500 - ₹1000</option>
-                <option value="1000-">₹1000+</option>
+              <option value="all">All Prices (₹)</option>
+              <option value="0-100">₹0 - ₹100</option>
+              <option value="100-500">₹100 - ₹500</option>
+              <option value="500-1000">₹500 - ₹1000</option>
+              <option value="1000-">₹1000+</option>
             </select>
           </div>
 
@@ -330,11 +336,10 @@ const Courses = () => {
                     setSortDirection('asc');
                   }
                 }}
-                className={`flex items-center px-3 py-1 rounded-lg text-sm transition-colors ${
-                  sortField === 'name' 
-                    ? 'bg-indigo-100 text-indigo-700' 
+                className={`flex items-center px-3 py-1 rounded-lg text-sm transition-colors ${sortField === 'name'
+                    ? 'bg-indigo-100 text-indigo-700'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Name
                 {sortField === 'name' && (
@@ -350,11 +355,10 @@ const Courses = () => {
                     setSortDirection('asc');
                   }
                 }}
-                className={`flex items-center px-3 py-1 rounded-lg text-sm transition-colors ${
-                  sortField === 'price' 
-                    ? 'bg-indigo-100 text-indigo-700' 
+                className={`flex items-center px-3 py-1 rounded-lg text-sm transition-colors ${sortField === 'price'
+                    ? 'bg-indigo-100 text-indigo-700'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Price (₹)
                 {sortField === 'price' && (
@@ -370,11 +374,10 @@ const Courses = () => {
                     setSortDirection('asc');
                   }
                 }}
-                className={`flex items-center px-3 py-1 rounded-lg text-sm transition-colors ${
-                  sortField === 'duration' 
-                    ? 'bg-indigo-100 text-indigo-700' 
+                className={`flex items-center px-3 py-1 rounded-lg text-sm transition-colors ${sortField === 'duration'
+                    ? 'bg-indigo-100 text-indigo-700'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Duration
                 {sortField === 'duration' && (
@@ -393,7 +396,7 @@ const Courses = () => {
 
         {/* Results Summary */}
         <div className="mb-6">
-              <p className="text-gray-600">
+          <p className="text-gray-600">
             Showing {filteredCourses.length} of {courses.length} courses
             {sortField && (
               <span className="ml-2 text-indigo-600">
@@ -474,9 +477,9 @@ const Courses = () => {
                           Certificate
                         </div>
                       )}
-            </div>
-          </div>
-        </motion.div>
+                    </div>
+                  </div>
+                </motion.div>
               ))}
             </div>
 
@@ -491,24 +494,23 @@ const Courses = () => {
                   >
                     Previous
                   </button>
-                  
+
                   {[...Array(totalPages)].map((_, index) => {
                     const pageNumber = index + 1;
                     return (
                       <button
                         key={pageNumber}
                         onClick={() => paginate(pageNumber)}
-                        className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                          currentPage === pageNumber
+                        className={`px-3 py-2 text-sm font-medium rounded-lg ${currentPage === pageNumber
                             ? 'bg-indigo-600 text-white'
                             : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         {pageNumber}
                       </button>
                     );
                   })}
-                  
+
                   <button
                     onClick={() => paginate(currentPage + 1)}
                     disabled={currentPage === totalPages}

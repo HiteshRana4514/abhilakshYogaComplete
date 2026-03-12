@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, TABLES } from '../utils/supabase';
-import { 
-  MagnifyingGlassIcon, 
-  XMarkIcon, 
+import { useContent } from '../hooks/useContent';
+import {
+  MagnifyingGlassIcon,
+  XMarkIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   QuestionMarkCircleIcon,
@@ -12,16 +13,17 @@ import {
 import toast from 'react-hot-toast';
 
 const FAQ = () => {
+  const { content: pageContent } = useContent('faq');
   const [faqs, setFaqs] = useState([]);
   const [filteredFaqs, setFilteredFaqs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [expandedItems, setExpandedItems] = useState(new Set());
-  
+
   // Fetch FAQs from Supabase
   const fetchFAQs = async () => {
     try {
@@ -33,7 +35,7 @@ const FAQ = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       setFaqs(data || []);
       setFilteredFaqs(data || []);
     } catch (err) {
@@ -168,10 +170,10 @@ const FAQ = () => {
           className="text-center mb-12"
         >
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Frequently Asked Questions
+            {pageContent.header?.title || 'Frequently Asked Questions'}
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Find answers to common questions about our classes, courses, and services.
+            {pageContent.header?.description || 'Find answers to common questions about our classes, courses, and services.'}
           </p>
         </motion.div>
 
@@ -222,10 +224,10 @@ const FAQ = () => {
 
         {/* Results Summary and Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <p className="text-gray-600">
+          <p className="text-gray-600">
             Showing {filteredFaqs.length} of {faqs.length} FAQs
           </p>
-          
+
           {filteredFaqs.length > 0 && (
             <div className="flex gap-2">
               <button
@@ -328,9 +330,9 @@ const FAQ = () => {
                                 )}
                               </div>
                             </div>
-            </div>
-          </div>
-        </motion.div>
+                          </div>
+                        </div>
+                      </motion.div>
                     )}
                   </AnimatePresence>
                 </motion.div>

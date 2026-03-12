@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useContent } from '../hooks/useContent';
 import logo from '/logo.png'
 
 const Header = () => {
+  const { content: globalContent } = useContent('global');
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
@@ -23,14 +25,18 @@ const Header = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <img 
-              src={logo} 
-              alt="Abhilaksh Yoga Logo" 
+            <img
+              src={logo}
+              alt="Abhilaksh Yoga Logo"
               className="w-20 h-20 object-contain"
             />
             <div>
-              <h1 className="text-xl font-bold gradient-text">Abhilaksh Yoga</h1>
-              <p className="text-xs text-gray-600">Path to Vitality</p>
+              <h1 className="text-xl font-bold gradient-text">
+                {globalContent.branding?.site_name || 'Abhilaksh Yoga'}
+              </h1>
+              <p className="text-xs text-gray-600">
+                {globalContent.branding?.tagline || 'Path to Vitality'}
+              </p>
             </div>
           </Link>
 
@@ -40,11 +46,10 @@ const Header = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`${
-                  location.pathname === item.href
+                className={`${location.pathname === item.href
                     ? 'text-primary-green font-semibold'
                     : 'text-gray-700 hover:text-primary-green'
-                } transition-colors duration-200`}
+                  } transition-colors duration-200`}
               >
                 {item.name}
               </Link>
@@ -74,11 +79,10 @@ const Header = () => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`${
-                    location.pathname === item.href
+                  className={`${location.pathname === item.href
                       ? 'text-primary-green font-semibold'
                       : 'text-gray-700 hover:text-primary-green'
-                  } block px-3 py-2 transition-colors duration-200`}
+                    } block px-3 py-2 transition-colors duration-200`}
                   onClick={() => setIsOpen(false)}
                 >
                   {item.name}

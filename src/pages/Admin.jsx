@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, TABLES } from '../utils/supabase';
-import { ClassForm, CourseForm, GalleryUploadForm, TestimonialForm, FaqForm } from '../components/AdminForms';
-import { 
-  ChartBarIcon, 
-  UserGroupIcon, 
-  CalendarIcon, 
+import { ClassForm, CourseForm, GalleryUploadForm, TestimonialForm, FaqForm, ContentEditForm, TeamMemberForm } from '../components/AdminForms';
+import {
+  ChartBarIcon,
+  UserGroupIcon,
+  CalendarIcon,
   PhotoIcon,
   BookOpenIcon,
   QuestionMarkCircleIcon,
@@ -34,7 +34,8 @@ const Admin = () => {
     totalUsers: 0,
     totalTestimonials: 0,
     totalBookings: 0,
-    totalFaqs: 0
+    totalFaqs: 0,
+    totalSiteContent: 0
   });
   const [data, setData] = useState({
     classes: [],
@@ -43,50 +44,56 @@ const Admin = () => {
     gallery: [],
     testimonials: [],
     bookings: [],
-    faqs: []
+    faqs: [],
+    siteContent: []
   });
-  
+
   // Form states
   const [showClassForm, setShowClassForm] = useState(false);
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showGalleryForm, setShowGalleryForm] = useState(false);
   const [showTestimonialForm, setShowTestimonialForm] = useState(false);
   const [showFaqForm, setShowFaqForm] = useState(false);
+  const [showContentForm, setShowContentForm] = useState(false);
+  const [showTeamForm, setShowTeamForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  
+
   // Inquiry modal state
   const [showInquiryModal, setShowInquiryModal] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState(null);
-  
+
   // Booking modal state
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
-  
+
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Search states
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Booking search and filter states
   const [bookingSearchTerm, setBookingSearchTerm] = useState('');
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
   const [bookingDateFilter, setBookingDateFilter] = useState('all');
-  
+
   // Inquiry search and filter states
   const [inquirySearchTerm, setInquirySearchTerm] = useState('');
   const [inquirySubjectFilter, setInquirySubjectFilter] = useState('all');
-  
+
   // Sorting states
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
-  
+
   // Bulk selection states
   const [selectedItems, setSelectedItems] = useState([]);
-  
+
+  // CMS UI state
+  const [selectedCmsPage, setSelectedCmsPage] = useState('home');
+
   // Last updated timestamp
   const [lastUpdated, setLastUpdated] = useState(null);
-  
+
   // Check if user is admin - check both email and user metadata
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
@@ -102,7 +109,7 @@ const Admin = () => {
     const headers = Object.keys(data[0]);
     const csvContent = [
       headers.join(','),
-      ...data.map(row => 
+      ...data.map(row =>
         headers.map(header => {
           const value = row[header];
           // Handle values that contain commas, quotes, or newlines
@@ -126,7 +133,7 @@ const Admin = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast.success(`${filename} exported successfully`);
   };
 
@@ -203,7 +210,7 @@ const Admin = () => {
       bookings: data.bookings.length,
       faqs: data.faqs.length
     };
-    
+
     const exportData = [{
       'Data Type': 'Summary',
       'Total Classes': allData.classes,
@@ -215,22 +222,22 @@ const Admin = () => {
       'Total FAQs': allData.faqs,
       'Export Date': new Date().toLocaleString()
     }];
-    
+
     exportToCSV(exportData, 'admin_summary');
   };
 
   const exportFilteredClasses = () => {
-    const filteredClasses = data.classes.filter(cls => 
+    const filteredClasses = data.classes.filter(cls =>
       cls.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cls.instructor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cls.level?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    
+
     if (filteredClasses.length === 0) {
       toast.error('No filtered classes to export');
       return;
     }
-    
+
     const exportData = filteredClasses.map(cls => ({
       ID: cls.id,
       Name: cls.name,
@@ -245,7 +252,7 @@ const Admin = () => {
       'Created At': new Date(cls.created_at).toLocaleString(),
       'Updated At': cls.updated_at ? new Date(cls.updated_at).toLocaleString() : ''
     }));
-    
+
     exportToCSV(exportData, `filtered_classes_${searchTerm || 'all'}`);
   };
 
@@ -313,9 +320,9 @@ const Admin = () => {
         console.log('App metadata:', user.app_metadata);
 
         // First check if user has admin role in metadata
-        let adminCheck = user?.email === 'admin@abhilakshyoga.com' || 
-                        user?.user_metadata?.role === 'admin' || 
-                        user?.app_metadata?.role === 'admin';
+        let adminCheck = user?.email === 'admin@abhilakshyoga.com' ||
+          user?.user_metadata?.role === 'admin' ||
+          user?.app_metadata?.role === 'admin';
 
         // If not admin by metadata, check database
         if (!adminCheck) {
@@ -351,7 +358,7 @@ const Admin = () => {
   // Auto-refresh data every 5 minutes
   useEffect(() => {
     if (!isAdmin) return;
-    
+
     const interval = setInterval(() => {
       fetchStats();
       fetchData();
@@ -362,14 +369,15 @@ const Admin = () => {
 
   const fetchStats = async () => {
     try {
-      const [classesCount, coursesCount, inquiriesCount, usersCount, testimonialsCount, bookingsCount, faqsCount] = await Promise.all([
+      const [classesCount, coursesCount, inquiriesCount, usersCount, testimonialsCount, bookingsCount, faqsCount, siteContentCount] = await Promise.all([
         supabase.from(TABLES.CLASSES).select('*', { count: 'exact' }),
         supabase.from(TABLES.COURSES).select('*', { count: 'exact' }),
         supabase.from(TABLES.CONTACT_QUERIES).select('*', { count: 'exact' }),
         supabase.from(TABLES.USERS).select('*', { count: 'exact' }),
         supabase.from('testimonials').select('*', { count: 'exact' }),
         supabase.from(TABLES.BOOKINGS).select('*', { count: 'exact' }),
-        supabase.from(TABLES.FAQ).select('*', { count: 'exact' })
+        supabase.from(TABLES.FAQ).select('*', { count: 'exact' }),
+        supabase.from(TABLES.SITE_CONTENT).select('*', { count: 'exact' })
       ]);
 
       setStats({
@@ -379,7 +387,8 @@ const Admin = () => {
         totalUsers: usersCount.count || 0,
         totalTestimonials: testimonialsCount.count || 0,
         totalBookings: bookingsCount.count || 0,
-        totalFaqs: faqsCount.count || 0
+        totalFaqs: faqsCount.count || 0,
+        totalSiteContent: siteContentCount.count || 0
       });
     } catch (err) {
       console.error('Error fetching stats:', err);
@@ -389,14 +398,15 @@ const Admin = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [classes, courses, inquiries, gallery, testimonials, bookings, faqs] = await Promise.all([
+      const [classes, courses, inquiries, gallery, testimonials, bookings, faqs, siteContent] = await Promise.all([
         supabase.from(TABLES.CLASSES).select('*').order('created_at', { ascending: false }),
         supabase.from(TABLES.COURSES).select('*').order('created_at', { ascending: false }),
         supabase.from(TABLES.CONTACT_QUERIES).select('*').order('created_at', { ascending: false }),
         supabase.from(TABLES.GALLERY).select('*').order('created_at', { ascending: false }),
         supabase.from('testimonials').select('*').order('created_at', { ascending: false }),
         supabase.from(TABLES.BOOKINGS).select('*, classes(name)').order('created_at', { ascending: false }),
-        supabase.from(TABLES.FAQ).select('*').order('order_index', { ascending: true }).order('created_at', { ascending: false })
+        supabase.from(TABLES.FAQ).select('*').order('order_index', { ascending: true }).order('created_at', { ascending: false }),
+        supabase.from(TABLES.SITE_CONTENT).select('*').order('page', { ascending: true }).order('section', { ascending: true })
       ]);
 
       setData({
@@ -406,7 +416,8 @@ const Admin = () => {
         gallery: gallery.data || [],
         testimonials: testimonials.data || [],
         bookings: bookings.data || [],
-        faqs: faqs.data || []
+        faqs: faqs.data || [],
+        siteContent: siteContent.data || []
       });
       setLastUpdated(new Date());
     } catch (err) {
@@ -455,12 +466,23 @@ const Admin = () => {
     setShowFaqForm(true);
   };
 
+  const openContentForm = (item = null) => {
+    setEditingItem(item);
+    if (item && item.page === 'about' && item.section === 'team' && item.key === 'members') {
+      setShowTeamForm(true);
+    } else {
+      setShowContentForm(true);
+    }
+  };
+
   const closeForms = () => {
     setShowClassForm(false);
     setShowCourseForm(false);
     setShowGalleryForm(false);
     setShowTestimonialForm(false);
     setShowFaqForm(false);
+    setShowContentForm(false);
+    setShowTeamForm(false);
     setEditingItem(null);
   };
 
@@ -487,48 +509,48 @@ const Admin = () => {
   // Filter and search functions
   const getFilteredBookings = () => {
     let filtered = data.bookings;
-    
+
     // Search filter
     if (bookingSearchTerm) {
-      filtered = filtered.filter(booking => 
+      filtered = filtered.filter(booking =>
         booking.name?.toLowerCase().includes(bookingSearchTerm.toLowerCase()) ||
         booking.email?.toLowerCase().includes(bookingSearchTerm.toLowerCase()) ||
         booking.classes?.name?.toLowerCase().includes(bookingSearchTerm.toLowerCase())
       );
     }
-    
+
     // Status filter
     if (bookingStatusFilter !== 'all') {
       filtered = filtered.filter(booking => booking.status === bookingStatusFilter);
     }
-    
+
     // Date filter
     if (bookingDateFilter !== 'all') {
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       switch (bookingDateFilter) {
         case 'today':
-          filtered = filtered.filter(booking => 
+          filtered = filtered.filter(booking =>
             new Date(booking.date).toDateString() === today.toDateString()
           );
           break;
         case 'yesterday':
-          filtered = filtered.filter(booking => 
+          filtered = filtered.filter(booking =>
             new Date(booking.date).toDateString() === yesterday.toDateString()
           );
           break;
         case 'this_week': {
           const weekAgo = new Date(today);
           weekAgo.setDate(weekAgo.getDate() - 7);
-          filtered = filtered.filter(booking => 
+          filtered = filtered.filter(booking =>
             new Date(booking.date) >= weekAgo
           );
           break;
         }
         case 'this_month':
-          filtered = filtered.filter(booking => 
+          filtered = filtered.filter(booking =>
             new Date(booking.date).getMonth() === today.getMonth() &&
             new Date(booking.date).getFullYear() === today.getFullYear()
           );
@@ -537,31 +559,31 @@ const Admin = () => {
           break;
       }
     }
-    
+
     return filtered;
   };
 
   const getFilteredInquiries = () => {
     let filtered = data.inquiries;
-    
+
     // Search filter
     if (inquirySearchTerm) {
-      filtered = filtered.filter(inquiry => 
+      filtered = filtered.filter(inquiry =>
         inquiry.name?.toLowerCase().includes(inquirySearchTerm.toLowerCase()) ||
         inquiry.email?.toLowerCase().includes(inquirySearchTerm.toLowerCase()) ||
         inquiry.subject?.toLowerCase().includes(inquirySearchTerm.toLowerCase()) ||
         inquiry.message?.toLowerCase().includes(inquirySearchTerm.toLowerCase())
       );
     }
-    
+
     // Subject filter
     if (inquirySubjectFilter !== 'all') {
       filtered = filtered.filter(inquiry => inquiry.subject === inquirySubjectFilter);
     }
-    
+
     return filtered;
   };
-  
+
   // Delete functions
   const deleteClass = async (id) => {
     if (window.confirm('Are you sure you want to delete this class?')) {
@@ -570,9 +592,9 @@ const Admin = () => {
           .from(TABLES.CLASSES)
           .delete()
           .eq('id', id);
-        
+
         if (error) throw error;
-        
+
         toast.success('Class deleted successfully');
         fetchData(); // Refresh data
       } catch (error) {
@@ -589,9 +611,9 @@ const Admin = () => {
           .from(TABLES.COURSES)
           .delete()
           .eq('id', id);
-        
+
         if (error) throw error;
-        
+
         toast.success('Course deleted successfully');
         fetchData(); // Refresh data
       } catch (error) {
@@ -608,9 +630,9 @@ const Admin = () => {
           .from(TABLES.GALLERY)
           .delete()
           .eq('id', id);
-        
+
         if (error) throw error;
-        
+
         toast.success('Image deleted successfully');
         fetchData(); // Refresh data
       } catch (error) {
@@ -627,9 +649,9 @@ const Admin = () => {
           .from(TABLES.CONTACT_QUERIES)
           .delete()
           .eq('id', id);
-        
+
         if (error) throw error;
-        
+
         toast.success('Inquiry deleted successfully');
         fetchData(); // Refresh data
       } catch (error) {
@@ -646,9 +668,9 @@ const Admin = () => {
           .from('testimonials')
           .delete()
           .eq('id', id);
-        
+
         if (error) throw error;
-        
+
         toast.success('Testimonial deleted successfully');
         fetchData(); // Refresh data
       } catch (error) {
@@ -665,9 +687,9 @@ const Admin = () => {
           .from(TABLES.FAQ)
           .delete()
           .eq('id', id);
-        
+
         if (error) throw error;
-        
+
         toast.success('FAQ deleted successfully');
         fetchData(); // Refresh data
       } catch (error) {
@@ -831,6 +853,18 @@ const Admin = () => {
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-teal-100 rounded-lg">
+              <CogIcon className="h-6 w-6 text-teal-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Site Content</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalSiteContent}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -876,12 +910,11 @@ const Admin = () => {
                   <div>
                     <p className="font-medium text-gray-900">{booking.name}</p>
                     <p className="text-sm text-gray-600">{booking.classes?.name || 'Unknown Class'}</p>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                       booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                        booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                      }`}>
                       {booking.status}
                     </span>
                   </div>
@@ -946,7 +979,7 @@ const Admin = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 
   const renderClasses = () => (
@@ -955,7 +988,7 @@ const Admin = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Manage Classes</h2>
           <p className="text-sm text-gray-600 mt-1">
-            {data.classes.filter(cls => 
+            {data.classes.filter(cls =>
               cls.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
               cls.instructor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
               cls.level?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1002,7 +1035,7 @@ const Admin = () => {
           </button>
           <button
             onClick={() => {
-              const filteredClasses = data.classes.filter(cls => 
+              const filteredClasses = data.classes.filter(cls =>
                 cls.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 cls.instructor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 cls.level?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1015,20 +1048,20 @@ const Admin = () => {
             }}
             className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
-            {selectedItems.length === data.classes.filter(cls => 
+            {selectedItems.length === data.classes.filter(cls =>
               cls.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
               cls.instructor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
               cls.level?.toLowerCase().includes(searchTerm.toLowerCase())
             ).length && selectedItems.length > 0 ? 'Deselect All' : 'Select All'}
           </button>
-          <button 
+          <button
             onClick={() => openClassForm()}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Add New Class
           </button>
-          <button 
+          <button
             onClick={exportClasses}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
@@ -1036,10 +1069,10 @@ const Admin = () => {
             Export Classes
           </button>
           {searchTerm && (
-            <button 
+            <button
               onClick={exportFilteredClasses}
               className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-              title={`Export filtered classes (${data.classes.filter(cls => 
+              title={`Export filtered classes (${data.classes.filter(cls =>
                 cls.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 cls.instructor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 cls.level?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1051,7 +1084,7 @@ const Admin = () => {
           )}
         </div>
       </div>
-      
+
       {selectedItems.length > 0 && (
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between">
@@ -1081,7 +1114,7 @@ const Admin = () => {
           </div>
         </div>
       )}
-      
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -1098,7 +1131,7 @@ const Admin = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {data.classes.length > 0 ? (
                 data.classes
-                  .filter(cls => 
+                  .filter(cls =>
                     cls.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     cls.instructor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     cls.level?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1113,42 +1146,42 @@ const Admin = () => {
                     }
                   })
                   .map((cls) => (
-                  <tr key={cls.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{cls.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cls.instructor}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cls.duration}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{cls.level}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {cls.image_url ? (
-                        <img 
-                          src={cls.image_url} 
-                          alt={cls.name} 
-                          className="w-12 h-12 object-cover rounded-lg border border-gray-300"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <PhotoIcon className="h-6 w-6 text-gray-400" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button 
-                        onClick={() => openClassForm(cls)}
-                        className="text-green-600 hover:text-green-900 transition-colors"
-                        title="Edit class"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => deleteClass(cls.id)}
-                        className="text-red-600 hover:text-red-900 transition-colors"
-                        title="Delete class"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                    <tr key={cls.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{cls.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cls.instructor}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cls.duration}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{cls.level}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {cls.image_url ? (
+                          <img
+                            src={cls.image_url}
+                            alt={cls.name}
+                            className="w-12 h-12 object-cover rounded-lg border border-gray-300"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <PhotoIcon className="h-6 w-6 text-gray-400" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button
+                          onClick={() => openClassForm(cls)}
+                          className="text-green-600 hover:text-green-900 transition-colors"
+                          title="Edit class"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteClass(cls.id)}
+                          className="text-red-600 hover:text-red-900 transition-colors"
+                          title="Delete class"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
               ) : (
                 <tr>
                   <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
@@ -1178,14 +1211,14 @@ const Admin = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Manage Courses</h2>
         <div className="flex space-x-4">
-          <button 
+          <button
             onClick={() => openCourseForm()}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Add New Course
           </button>
-          <button 
+          <button
             onClick={exportCourses}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
@@ -1194,7 +1227,7 @@ const Admin = () => {
           </button>
         </div>
       </div>
-      
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -1234,9 +1267,9 @@ const Admin = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {course.image_url ? (
-                      <img 
-                        src={course.image_url} 
-                        alt={course.name} 
+                      <img
+                        src={course.image_url}
+                        alt={course.name}
                         className="w-12 h-12 object-cover rounded-lg border border-gray-300"
                       />
                     ) : (
@@ -1246,14 +1279,14 @@ const Admin = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button 
+                    <button
                       onClick={() => openCourseForm(course)}
                       className="text-green-600 hover:text-green-900 transition-colors"
                       title="Edit course"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => deleteCourse(course.id)}
                       className="text-red-600 hover:text-red-900 transition-colors"
                       title="Delete course"
@@ -1272,7 +1305,7 @@ const Admin = () => {
 
   const renderInquiries = () => {
     const filteredInquiries = getFilteredInquiries();
-    
+
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -1282,7 +1315,7 @@ const Admin = () => {
               {filteredInquiries.length} of {data.inquiries.length} inquiries
             </p>
           </div>
-          <button 
+          <button
             onClick={exportInquiries}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-yellow-600 hover:bg-yellow-700 transition-colors"
           >
@@ -1330,7 +1363,7 @@ const Admin = () => {
             </button>
           </div>
         </div>
-      
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -1357,14 +1390,14 @@ const Admin = () => {
                       {new Date(inquiry.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button 
+                      <button
                         onClick={() => openInquiryModal(inquiry)}
                         className="text-blue-600 hover:text-blue-900 transition-colors mr-2"
                         title="View full inquiry"
                       >
                         <EyeIcon className="h-4 w-4" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => deleteInquiry(inquiry.id)}
                         className="text-red-600 hover:text-red-900 transition-colors"
                         title="Delete inquiry"
@@ -1387,14 +1420,14 @@ const Admin = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Gallery Management</h2>
         <div className="flex space-x-4">
-          <button 
+          <button
             onClick={() => openGalleryForm()}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 transition-colors"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Upload Image
           </button>
-          <button 
+          <button
             onClick={exportGallery}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
@@ -1403,7 +1436,7 @@ const Admin = () => {
           </button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {data.gallery.map((image) => (
           <div key={image.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1421,7 +1454,7 @@ const Admin = () => {
                   {new Date(image.created_at).toLocaleDateString()}
                 </span>
                 <div className="flex space-x-2">
-                  <button 
+                  <button
                     onClick={() => deleteGalleryItem(image.id)}
                     className="text-red-600 hover:text-red-900 transition-colors"
                     title="Delete image"
@@ -1442,14 +1475,14 @@ const Admin = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Testimonials Management</h2>
         <div className="flex space-x-4">
-          <button 
+          <button
             onClick={() => openTestimonialForm()}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-pink-600 hover:bg-pink-700 transition-colors"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Add Testimonial
           </button>
-          <button 
+          <button
             onClick={exportTestimonials}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
@@ -1458,7 +1491,7 @@ const Admin = () => {
           </button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {data.testimonials.map((testimonial) => (
           <div key={testimonial.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1480,28 +1513,28 @@ const Admin = () => {
                   <p className="text-sm text-gray-500">{testimonial.role}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center mb-3">
                 {[...Array(testimonial.rating)].map((_, i) => (
                   <span key={i} className="text-yellow-400">⭐</span>
                 ))}
               </div>
-              
+
               <p className="text-gray-600 text-sm mb-4 line-clamp-3">{testimonial.content}</p>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">
                   {new Date(testimonial.created_at).toLocaleDateString()}
                 </span>
                 <div className="flex space-x-2">
-                  <button 
+                  <button
                     onClick={() => openTestimonialForm(testimonial)}
                     className="text-green-600 hover:text-green-900 transition-colors"
                     title="Edit testimonial"
                   >
                     <PencilIcon className="h-4 w-4" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => deleteTestimonial(testimonial.id)}
                     className="text-red-600 hover:text-red-900 transition-colors"
                     title="Delete testimonial"
@@ -1510,7 +1543,7 @@ const Admin = () => {
                   </button>
                 </div>
               </div>
-              
+
               {testimonial.featured && (
                 <div className="mt-3">
                   <span className="inline-block bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded-full">
@@ -1527,7 +1560,7 @@ const Admin = () => {
 
   const renderBookings = () => {
     const filteredBookings = getFilteredBookings();
-    
+
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -1537,7 +1570,7 @@ const Admin = () => {
               {filteredBookings.length} of {data.bookings.length} bookings
             </p>
           </div>
-          <button 
+          <button
             onClick={exportBookings}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
@@ -1600,7 +1633,7 @@ const Admin = () => {
             </button>
           </div>
         </div>
-      
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -1649,12 +1682,11 @@ const Admin = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                         booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                          booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                        }`}>
                         {booking.status}
                       </span>
                     </td>
@@ -1673,22 +1705,20 @@ const Admin = () => {
                         <button
                           onClick={() => updateBookingStatus(booking.id, 'confirmed')}
                           disabled={booking.status === 'confirmed'}
-                          className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                            booking.status === 'confirmed'
-                              ? 'bg-green-100 text-green-800 cursor-not-allowed'
-                              : 'bg-green-100 text-green-800 hover:bg-green-200'
-                          }`}
+                          className={`px-3 py-1 text-xs rounded-full transition-colors ${booking.status === 'confirmed'
+                            ? 'bg-green-100 text-green-800 cursor-not-allowed'
+                            : 'bg-green-100 text-green-800 hover:bg-green-200'
+                            }`}
                         >
                           Confirm
                         </button>
                         <button
                           onClick={() => updateBookingStatus(booking.id, 'cancelled')}
                           disabled={booking.status === 'cancelled'}
-                          className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                            booking.status === 'cancelled'
-                              ? 'bg-red-100 text-red-800 cursor-not-allowed'
-                              : 'bg-red-100 text-red-800 hover:bg-red-200'
-                          }`}
+                          className={`px-3 py-1 text-xs rounded-full transition-colors ${booking.status === 'cancelled'
+                            ? 'bg-red-100 text-red-800 cursor-not-allowed'
+                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                            }`}
                         >
                           Cancel
                         </button>
@@ -1699,14 +1729,14 @@ const Admin = () => {
               </tbody>
             </table>
           </div>
-          
+
           {filteredBookings.length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-500 text-lg mb-4">
                 {data.bookings.length === 0 ? 'No bookings found' : 'No bookings match your filters'}
               </div>
               <p className="text-gray-400">
-                {data.bookings.length === 0 
+                {data.bookings.length === 0
                   ? 'Bookings will appear here once customers start booking classes.'
                   : 'Try adjusting your search terms or filters.'
                 }
@@ -1722,7 +1752,7 @@ const Admin = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Manage FAQs</h2>
-        <button 
+        <button
           onClick={() => openFaqForm()}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
         >
@@ -1730,7 +1760,7 @@ const Admin = () => {
           Add New FAQ
         </button>
       </div>
-      
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -1759,21 +1789,20 @@ const Admin = () => {
                       {faq.order_index || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        faq.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${faq.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
                         {faq.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button 
+                      <button
                         onClick={() => openFaqForm(faq)}
                         className="text-green-600 hover:text-green-900 transition-colors"
                         title="Edit FAQ"
                       >
                         <PencilIcon className="h-4 w-4" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => deleteFaq(faq.id)}
                         className="text-red-600 hover:text-red-900 transition-colors"
                         title="Delete FAQ"
@@ -1807,6 +1836,102 @@ const Admin = () => {
     </div>
   );
 
+  const renderSiteContent = () => {
+    const pages = ['home', 'about', 'contact', 'global'];
+
+    // Filter content based on selected page
+    const filteredContent = data.siteContent.filter(item => item.page === selectedCmsPage);
+
+    // Group filtered content by section
+    const groupedContent = filteredContent.reduce((acc, item) => {
+      if (!acc[item.section]) {
+        acc[item.section] = [];
+      }
+      acc[item.section].push(item);
+      return acc;
+    }, {});
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-900 border-l-4 border-indigo-600 pl-4">
+            Site Content Management
+          </h2>
+          <div className="flex bg-gray-100 p-1 rounded-lg">
+            {pages.map((page) => (
+              <button
+                key={page}
+                onClick={() => setSelectedCmsPage(page)}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 capitalize ${selectedCmsPage === page
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {Object.keys(groupedContent).length > 0 ? (
+          <div className="grid grid-cols-1 gap-8">
+            {Object.entries(groupedContent).map(([section, items]) => (
+              <div key={section} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-gray-800 capitalize flex items-center">
+                    <CogIcon className="h-5 w-5 mr-2 text-indigo-500" />
+                    {section.replace(/_/g, ' ')} Section
+                  </h3>
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    {items.length} {items.length === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {items.map((item) => (
+                    <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors group">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-bold text-gray-700">{item.key}</span>
+                            <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-md ${item.type === 'json' ? 'bg-purple-100 text-purple-700' :
+                              item.type === 'image_url' ? 'bg-blue-100 text-blue-700' :
+                                'bg-green-100 text-green-700'
+                              }`}>
+                              {item.type}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 line-clamp-2 italic">
+                            {item.type === 'json' ? 'Structured Data Content' :
+                              typeof item.value === 'string' ? item.value.replace(/"/g, '') : 'Item Value'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => openContentForm(item)}
+                          className="flex items-center justify-center px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors self-end md:self-center"
+                        >
+                          <PencilIcon className="h-4 w-4 mr-2" />
+                          Edit Item
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CogIcon className="h-8 w-8 text-indigo-500" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">No content found</h3>
+            <p className="text-gray-500 mt-2">There are no content items configured for the {selectedCmsPage} page yet.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -1825,6 +1950,8 @@ const Admin = () => {
         return renderTestimonials();
       case 'faqs':
         return renderFaqs();
+      case 'content':
+        return renderSiteContent();
       default:
         return renderDashboard();
     }
@@ -1887,15 +2014,15 @@ const Admin = () => {
             { id: 'gallery', name: 'Gallery', icon: PhotoIcon },
             { id: 'testimonials', name: 'Testimonials', icon: QuestionMarkCircleIcon },
             { id: 'faqs', name: 'FAQs', icon: QuestionMarkCircleIcon },
+            { id: 'content', name: 'Site Content', icon: CogIcon },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               <tab.icon className="h-5 w-5" />
               <span>{tab.name}</span>
@@ -1916,14 +2043,28 @@ const Admin = () => {
         editData={editingItem}
         onSuccess={handleFormSuccess}
       />
-      
+
+      <ContentEditForm
+        isOpen={showContentForm}
+        onClose={closeForms}
+        editData={editingItem}
+        onSuccess={handleFormSuccess}
+      />
+
+      <TeamMemberForm
+        isOpen={showTeamForm}
+        onClose={closeForms}
+        editData={editingItem}
+        onSuccess={handleFormSuccess}
+      />
+
       <CourseForm
         isOpen={showCourseForm}
         onClose={closeForms}
         editData={editingItem}
         onSuccess={handleFormSuccess}
       />
-      
+
       <GalleryUploadForm
         isOpen={showGalleryForm}
         onClose={closeForms}
@@ -1959,7 +2100,7 @@ const Admin = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -1979,14 +2120,14 @@ const Admin = () => {
                   <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{selectedInquiry.subject || 'General Inquiry'}</p>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedInquiry.message}</p>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Submitted</label>
                 <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">
@@ -1994,7 +2135,7 @@ const Admin = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
               <button
                 onClick={closeInquiryModal}
@@ -2033,7 +2174,7 @@ const Admin = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -2064,12 +2205,11 @@ const Admin = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                    selectedBooking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                  <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${selectedBooking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                     selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    selectedBooking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                      selectedBooking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                    }`}>
                     {selectedBooking.status}
                   </span>
                 </div>
@@ -2080,7 +2220,7 @@ const Admin = () => {
                   </p>
                 </div>
               </div>
-              
+
               {selectedBooking.special_requests && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests</label>
@@ -2090,7 +2230,7 @@ const Admin = () => {
                 </div>
               )}
             </div>
-            
+
             <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
               <button
                 onClick={closeBookingModal}
@@ -2105,11 +2245,10 @@ const Admin = () => {
                     closeBookingModal();
                   }}
                   disabled={selectedBooking.status === 'confirmed'}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    selectedBooking.status === 'confirmed'
-                      ? 'bg-green-100 text-green-800 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${selectedBooking.status === 'confirmed'
+                    ? 'bg-green-100 text-green-800 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
                 >
                   Confirm
                 </button>
@@ -2119,11 +2258,10 @@ const Admin = () => {
                     closeBookingModal();
                   }}
                   disabled={selectedBooking.status === 'cancelled'}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    selectedBooking.status === 'cancelled'
-                      ? 'bg-red-100 text-red-800 cursor-not-allowed'
-                      : 'bg-red-600 text-white hover:bg-red-700'
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${selectedBooking.status === 'cancelled'
+                    ? 'bg-red-100 text-red-800 cursor-not-allowed'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+                    }`}
                 >
                   Cancel
                 </button>

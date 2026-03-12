@@ -3,12 +3,17 @@ import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { PhoneIcon, EnvelopeIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { Facebook, Instagram, Youtube, MessageSquare } from 'lucide-react';
 import { supabase, TABLES } from '../utils/supabase';
+import { useContent } from '../hooks/useContent';
+import SEO from '../components/SEO';
 
 const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [faqs, setFaqs] = useState([]);
   const [isLoadingFaqs, setIsLoadingFaqs] = useState(true);
+  const { content: globalContent } = useContent('global');
+  const { content: pageContent } = useContent('contact');
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
   // Fetch FAQs from database
@@ -68,19 +73,19 @@ const Contact = () => {
     {
       icon: PhoneIcon,
       title: 'Phone',
-      details: ['+91 98765 43210', '+91 98765 43211'],
-      action: 'tel:+919876543210'
+      details: globalContent.contact?.phone || ['+91 98765 43210', '+91 98765 43211'],
+      action: `tel:${(globalContent.contact?.phone?.[0] || '+919876543210').replace(/\s/g, '')}`
     },
     {
       icon: EnvelopeIcon,
       title: 'Email',
-      details: ['info@abhilakshyoga.com', 'support@abhilakshyoga.com'],
-      action: 'mailto:info@abhilakshyoga.com'
+      details: globalContent.contact?.email || ['info@abhilakshyoga.com', 'support@abhilakshyoga.com'],
+      action: `mailto:${globalContent.contact?.email?.[0] || 'info@abhilakshyoga.com'}`
     },
     {
       icon: MapPinIcon,
       title: 'Address',
-      details: [
+      details: globalContent.contact?.address || [
         '123 Yoga Street, Wellness City',
         'State - 123456, India'
       ],
@@ -89,42 +94,68 @@ const Contact = () => {
     {
       icon: ClockIcon,
       title: 'Hours',
-      details: [
+      details: globalContent.contact?.hours || [
         'Monday - Friday: 6:00 AM - 9:00 PM',
         'Saturday - Sunday: 7:00 AM - 8:00 PM'
       ]
     }
   ];
 
-  const socialLinks = [
-    { name: 'WhatsApp', href: 'https://wa.me/919876543210', icon: '💬' },
-    { name: 'Facebook', href: '#', icon: '📘' },
-    { name: 'Instagram', href: '#', icon: '📷' },
-    { name: 'YouTube', href: '#', icon: '📺' }
+  const SocialIcon = ({ name, className }) => {
+    switch (name?.toLowerCase()) {
+      case 'facebook': return <Facebook className={className} />;
+      case 'instagram': return <Instagram className={className} />;
+      case 'youtube': return <Youtube className={className} />;
+      case 'whatsapp': return <MessageSquare className={className} />;
+      default: return <MessageSquare className={className} />;
+    }
+  };
+
+  const socialLinks = globalContent.social?.links || [
+    { name: 'WhatsApp', href: 'https://wa.me/919876543210', icon: 'MessageSquare' },
+    { name: 'Facebook', href: '#', icon: 'Facebook' },
+    { name: 'Instagram', href: '#', icon: 'Instagram' },
+    { name: 'YouTube', href: '#', icon: 'Youtube' }
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title="Contact Us"
+        description="Have questions? Contact Abhilaksh Yoga Academy in Amritsar for class schedules, course details, and enrollment information."
+        keywords="Contact Yoga Academy, Yoga Amritsar Location, Yoga Classes Inquiry, Amritsar Yoga Studio"
+      />
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary-orange to-primary-green py-20">
-        <div className="absolute inset-0 bg-black opacity-20"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="relative bg-gradient-to-br from-primary-orange to-primary-green overflow-hidden">
+        <div className="absolute inset-0 bg-black opacity-30 z-10"></div>
+
+        {/* Dynamic Hero Image Background */}
+        {pageContent.hero?.image && (
+          <div className="absolute inset-0 z-0">
+            <img
+              src={pageContent.hero.image}
+              alt="Contact Hero"
+              className="w-full h-full object-cover opacity-50"
+            />
+          </div>
+        )}
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center z-20">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-4xl md:text-6xl font-bold text-white mb-6"
+            className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg"
           >
-            Get in Touch
+            {pageContent.hero?.title || 'Get in Touch'}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-xl text-white/90 max-w-3xl mx-auto"
+            className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed drop-shadow-md"
           >
-            Have questions about our classes, courses, or want to start your yoga journey? 
-            We'd love to hear from you!
+            {pageContent.hero?.subtitle || "Have questions about our classes, courses, or want to start your yoga journey? We'd love to hear from you!"}
           </motion.p>
         </div>
       </section>
@@ -140,7 +171,9 @@ const Contact = () => {
               transition={{ duration: 0.8 }}
             >
               <div className="card p-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Send us a Message</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                  {pageContent.form?.title || 'Send us a Message'}
+                </h2>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -179,7 +212,7 @@ const Contact = () => {
                     <input
                       type="email"
                       id="email"
-                      {...register('email', { 
+                      {...register('email', {
                         required: 'Email is required',
                         pattern: {
                           value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -245,10 +278,11 @@ const Contact = () => {
               className="space-y-8"
             >
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Contact Information</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                  {pageContent.info?.title || 'Contact Information'}
+                </h2>
                 <p className="text-lg text-gray-600 mb-8">
-                  Reach out to us through any of these channels. We're here to help you 
-                  on your yoga journey.
+                  {pageContent.info?.subtitle || "Reach out to us through any of these channels. We're here to help you on your yoga journey."}
                 </p>
               </div>
 
@@ -295,7 +329,7 @@ const Contact = () => {
                       className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary-green transition-colors duration-200"
                       title={social.name}
                     >
-                      <span className="text-lg">{social.icon}</span>
+                      <SocialIcon name={social.name} className="h-6 w-6 text-white" />
                     </a>
                   ))}
                 </div>
@@ -309,34 +343,28 @@ const Contact = () => {
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Find Us</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">{pageContent.map?.title || 'Find Us'}</h2>
             <p className="text-lg text-gray-600">
-              Visit our studio and experience the peaceful atmosphere for yourself.
+              {pageContent.map?.subtitle || 'Visit our studio and experience the peaceful atmosphere for yourself.'}
             </p>
           </div>
-          
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="relative h-96 rounded-2xl overflow-hidden shadow-lg"
           >
-            {/* Placeholder for Google Maps */}
-            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-              <div className="text-center">
-                <MapPinIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 text-lg">Interactive Map</p>
-                <p className="text-gray-500">Google Maps integration would go here</p>
-                <a
-                  href="https://maps.google.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block mt-4 btn-primary"
-                >
-                  Open in Google Maps
-                </a>
-              </div>
-            </div>
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3396.175597180622!2d74.8716342!3d31.6564153!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39196393114c6725%3A0xaca1d188b7a11d81!2sAbhilaksh%20yoga%20academy%2FBest%20Yoga%20Classes%20in%20Amritsar%2FHatha%20yoga%2FAshtanga%20Yoga%20classes%2FPower%20Yoga!5e0!3m2!1sen!2sin!4v1773296563758!5m2!1sen!2sin"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen=""
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Abhilaksh Yoga Academy Location"
+            ></iframe>
           </motion.div>
         </div>
       </section>
@@ -346,12 +374,12 @@ const Contact = () => {
         <section className="py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
-              <p className="text-lg text-gray-600">
-                Find quick answers to common questions about our classes and services.
-              </p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                {pageContent.faq?.title || 'Frequently Asked Questions'}
+              </h2>
+              {pageContent.faq?.subtitle || 'Find quick answers to common questions about our classes and services.'}
             </div>
-            
+
             {isLoadingFaqs ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {[...Array(4)].map((_, index) => (
@@ -384,7 +412,7 @@ const Contact = () => {
                 ))}
               </div>
             )}
-            
+
             <div className="text-center mt-12">
               <a href="/faq" className="btn-primary">
                 View All FAQs

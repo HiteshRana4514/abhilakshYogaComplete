@@ -16,5 +16,6 @@ export const TABLES = {
   INTEREST_FORMS: 'interest_forms',
   USERS: 'users',
   FAVORITES: 'favorites',
-  BOOKINGS: 'bookings'
+  BOOKINGS: 'bookings',
+  SITE_CONTENT: 'site_content'
 }; 
